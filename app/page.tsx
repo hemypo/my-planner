@@ -1,10 +1,10 @@
 import AddTransactionForm from './components/AddTransactionForm';
+import ExpenseChart from './components/ExpenseChart';
 
 export default async function DashboardPage() {
   const SUPABASE_URL = process.env.SUPABASE_URL as string;
   const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY as string;
 
-  // 1. Загружаем данные
   const [categoriesRes, transactionsRes] = await Promise.all([
     fetch(`${SUPABASE_URL}/rest/v1/categories?select=*`, {
       headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
@@ -19,71 +19,82 @@ export default async function DashboardPage() {
   const categories = await categoriesRes.json();
   const transactions = await transactionsRes.json();
 
-  // 2. Считаем баланс и группируем транзакции
   let totalIncome = 0;
   let totalExpense = 0;
 
   transactions.forEach((t: any) => {
     const category = categories.find((c: any) => c.id === t.category_id);
-    if (category?.type === 'income') {
-      totalIncome += t.amount;
-    } else {
-      totalExpense += t.amount;
-    }
+    if (category?.type === 'income') totalIncome += t.amount;
+    else totalExpense += t.amount;
   });
 
   const balance = totalIncome - totalExpense;
 
-  // 3. Вычисляем прогресс по категориям (для карточки "Исполнение бюджета")
+  // Группируем траты для графика (суммируем расходы по каждой категории)
+  const chartData = categories
+    .filter((c: any) => c.type !== 'income')
+    .map((c: any) => {
+      const sum = transactions
+        .filter((t: any) => t.category_id === c.id)
+        .reduce((acc: number, t: any) => acc + t.amount, 0);
+      return { name: c.name, value: sum };
+    })
+    .filter((d: any) => d.value > 0); // Убираем категории с нулями, чтобы не захламлять график
+
+  // Прогресс бюджета
   const budgetProgress = categories
     .filter((c: any) => c.type !== 'income' && c.plan_amount > 0)
     .map((category: any) => {
       const spent = transactions
         .filter((t: any) => t.category_id === category.id)
         .reduce((sum: number, t: any) => sum + t.amount, 0);
-      
       return {
-        name: category.name,
-        plan: category.plan_amount,
-        spent: spent,
+        name: category.name, plan: category.plan_amount, spent: spent,
         percent: Math.min((spent / category.plan_amount) * 100, 100)
       };
     });
+
+  // Сортируем все транзакции от новых к старым
+  const sortedTransactions = [...transactions].reverse();
 
   return (
     <main className="main-content">
       <header className="topbar">
         <div className="greeting">
-          <h1>Привет! 👋</h1>
-          <p>Твоя финансовая сводка на сегодня.</p>
+          <h1>Аналитика 📊</h1>
+          <p>Твой полноценный финансовый дашборд.</p>
         </div>
       </header>
 
+      {/* Немного меняем сетку: график занимает 2 колонки */}
       <div className="dashboard-grid">
         
-        {/* ОСТАТОК БЮДЖЕТА */}
         <div className="card balance-card">
           <h3>Остаток бюджета</h3>
           <div className="balance-amount">₽ {balance.toLocaleString('ru-RU')}</div>
-          <p className="text-muted">Разница между доходами и расходами</p>
+          <p className="text-muted">За всё время</p>
         </div>
 
-        {/* ФОРМА ДОБАВЛЕНИЯ */}
         <div className="card action-card">
-          <h3>Быстрый расход</h3>
+          <h3>Добавить операцию</h3>
           <AddTransactionForm categories={categories} />
         </div>
 
-        {/* ПОСЛЕДНИЕ ОПЕРАЦИИ */}
+        {/* НОВАЯ КАРТОЧКА С ГРАФИКОМ */}
+        <div className="card span-2">
+          <h3>Структура расходов</h3>
+          <ExpenseChart data={chartData} />
+        </div>
+
         <div className="card transactions-card span-2">
-          <div className="card-header">
-            <h3>Последние операции</h3>
+          <div className="card-header" style={{ marginBottom: '16px' }}>
+            <h3>Все операции</h3>
           </div>
           <div className="transaction-list">
-            {transactions.length === 0 ? (
-              <p className="text-muted">Транзакций пока нет. Запиши первую!</p>
+            {sortedTransactions.length === 0 ? (
+              <p className="text-muted">Транзакций пока нет.</p>
             ) : (
-              transactions.slice(-5).reverse().map((tx: any) => {
+              sortedTransactions.map((tx: any) => {
                 const cat = categories.find((c: any) => c.id === tx.category_id);
                 const isIncome = cat?.type === 'income';
                 return (
@@ -91,6 +102,7 @@ export default async function DashboardPage() {
                     <div className="t-info">
                       <div>
                         <h4>{cat?.name || 'Неизвестно'}</h4>
+                        <p className="text-muted">{new Date(tx.created_at).toLocaleDateString('ru-RU')}</p>
                       </div>
                     </div>
                     <div className={`t-amount ${isIncome ? 'income' : 'expense'}`}>
@@ -103,12 +115,11 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* ИСПОЛНЕНИЕ БЮДЖЕТА */}
         <div className="card budget-card span-2">
           <h3>Исполнение бюджета</h3>
           <div className="budget-list">
             {budgetProgress.length === 0 ? (
-               <p className="text-muted">Плановые лимиты не заданы. Установи их в Supabase.</p>
+               <p className="text-muted">Плановые лимиты не заданы (укажи в Supabase).</p>
             ) : (
               budgetProgress.map((b: any, idx: number) => {
                 const isWarning = b.percent > 85 ? 'warning' : '';
