@@ -259,3 +259,25 @@ body {
 /* Утилиты */
 .text-muted { color: var(--text-muted); font-size: 13px; margin-top: 4px;}
 .balance-amount { font-size: 36px; font-weight: 700; color: var(--primary-color); margin-bottom: 8px;}
+
+/* Делаем список транзакций прокручиваемым */
+.transactions-card {
+  display: flex;
+  flex-direction: column;
+  max-height: 450px; /* Ограничиваем высоту карточки */
+}
+
+.transaction-list {
+  flex: 1;
+  overflow-y: auto; /* Включаем внутренний скролл */
+  padding-right: 12px;
+}
+
+/* Стилизуем сам ползунок скролла, чтобы он был тонким и красивым */
+.transaction-list::-webkit-scrollbar {
+  width: 6px;
+}
+.transaction-list::-webkit-scrollbar-thumb {
+  background-color: #e1e1e8;
+  border-radius: 10px;
+}
