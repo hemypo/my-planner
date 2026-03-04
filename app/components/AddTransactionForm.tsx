@@ -1,32 +1,30 @@
-"use client"; // Говорим Next.js, что этот код работает в браузере
+"use client";
 
-import { useState } from 'react';
+import { useRef } from 'react';
+import { addTransaction } from '../actions';
 
 export default function AddTransactionForm({ categories }: { categories: any[] }) {
-  const [amount, setAmount] = useState('');
-  const [categoryId, setCategoryId] = useState('');
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Здесь будет вызов Server Action для отправки данных в Supabase
-    console.log("Отправляем:", amount, categoryId);
-  };
+  // Ссылка на форму, чтобы очистить её после успешной отправки
+  const formRef = useRef<HTMLFormElement>(null);
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form 
+      ref={formRef}
+      action={async (formData) => {
+        await addTransaction(formData); // Вызываем серверную функцию
+        formRef.current?.reset();       // Очищаем инпуты
+      }}
+    >
       <input 
         type="number" 
+        name="amount" 
         placeholder="Сумма" 
         className="input-field"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
         required 
       />
       <select 
+        name="category_id" 
         className="input-field"
-        value={categoryId}
-        onChange={(e) => setCategoryId(e.target.value)}
         required
       >
         <option value="">Выберите категорию...</option>
