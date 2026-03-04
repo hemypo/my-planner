@@ -5,8 +5,8 @@ import AddTransactionForm from './components/AddTransactionForm';
 
 export default async function DashboardPage() {
   // 1. ЗАПРОСЫ К БАЗЕ (Выполняются на Vercel)
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL as string;
+const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY as string;
 
   const [categoriesRes, transactionsRes] = await Promise.all([
     fetch(`${SUPABASE_URL}/rest/v1/categories?select=*`, {
