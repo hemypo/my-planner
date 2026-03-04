@@ -34,7 +34,7 @@ export default function ExpenseChart({ data }: { data: { name: string, value: nu
             ))}
           </Pie>
           <Tooltip 
-            formatter={(value: number) => `₽ ${value.toLocaleString('ru-RU')}`} 
+            formatter={(value: any) => `₽ ${Number(value).toLocaleString('ru-RU')}`} 
             contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
           />
           <Legend wrapperStyle={{ fontSize: '14px', paddingTop: '20px' }}/>
